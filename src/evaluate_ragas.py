@@ -1,7 +1,6 @@
-from dotenv import load_dotenv
 from datasets import Dataset
 
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_ollama import ChatOllama
 from langchain.chains import RetrievalQA
 
 from ragas import evaluate
@@ -15,8 +14,6 @@ from utils import (
     load_retriever,
     load_prompt
 )
-
-load_dotenv()
 
 # ======================================
 # RETRIEVER
@@ -34,8 +31,8 @@ prompt = load_prompt()
 # LLM
 # ======================================
 
-llm = ChatGoogleGenerativeAI(
-    model="models/gemini-1.5-flash",
+llm = ChatOllama(
+    model="llama3",
     temperature=0
 )
 
@@ -52,14 +49,25 @@ qa_chain = RetrievalQA.from_chain_type(
     }
 )
 
+# ======================================
+# PREGUNTAS
+# ======================================
+
 questions = [
-    "¿Cuál es la nota mínima aprobatoria?",
-    "¿Qué pasa si un estudiante falta demasiado?",
-    "¿Cómo puedo recuperar una materia perdida?",
-    "¿Qué requisitos existen para homologación?",
-    "¿Cómo afecta cancelar una asignatura al promedio?",
-    "¿Cuál es el color oficial del uniforme?"
+    "¿Cuál es la nota mínima aprobatoria de una asignatura?", 
+"¿Cuántas inasistencias puede tener un estudiante antes de perder una materia?", 
+"¿Qué ocurre si un estudiante reprueba una materia?", 
+"¿Cómo se obtiene el promedio general del semestre?", 
+"¿Qué consecuencias académicas y administrativas tiene cancelar una asignatura?", 
+"¿Qué requisitos debe cumplir un estudiante para homologar materias y cómo afecta eso su historial académico?", 
+"¿Cuál es el color oficial del uniforme institucional?", 
+"¿Qué marca de computadores recomienda la universidad para los estudiantes?"
+
 ]
+
+# ======================================
+# DATASET
+# ======================================
 
 data = {
     "question": [],
@@ -69,18 +77,28 @@ data = {
 
 for question in questions:
 
+    print(f"\nPregunta: {question}")
+
     result = qa_chain.invoke({"query": question})
 
-    data["question"].append(question)
+    answer = result["result"]
 
-    data["answer"].append(result["result"])
+    print(f"Respuesta: {answer}")
 
-    data["contexts"].append([
+    contexts = [
         doc.page_content
         for doc in result["source_documents"]
-    ])
+    ]
+
+    data["question"].append(question)
+    data["answer"].append(answer)
+    data["contexts"].append(contexts)
 
 dataset = Dataset.from_dict(data)
+
+# ======================================
+# EVALUACIÓN RAGAS
+# ======================================
 
 result = evaluate(
     dataset=dataset,
@@ -88,11 +106,19 @@ result = evaluate(
         faithfulness,
         answer_relevancy,
         context_precision
-    ]
+    ],
+    llm=llm
 )
+
+# ======================================
+# RESULTADOS
+# ======================================
 
 df = result.to_pandas()
 
+print("\nResultados:")
 print(df)
 
 df.to_csv("../results/ragas_results.csv", index=False)
+
+print("\nResultados guardados en results/ragas_results.csv")
