@@ -5,8 +5,8 @@ from langchain_huggingface import HuggingFaceEmbeddings
 # Cambio: Ahora se usa langchain_chroma
 from langchain_chroma import Chroma
 
-DATA_PATH = "../data"
-VECTORSTORE_PATH = "../vectorstore"
+DATA_PATH = "data"
+VECTORSTORE_PATH = "vectorstore"
 
 # =========================
 # CARGAR DOCUMENTOS
